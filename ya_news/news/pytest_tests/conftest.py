@@ -55,21 +55,15 @@ def comment(news, author):
 
 
 @pytest.fixture
-def news_id(news):
-    return (news.id,)
-
-
-@pytest.fixture
 def all_news():
-    all_news = [
+    News.objects.bulk_create(
         News(
             title=f'Новость {index}',
             text='Текст',
             date=datetime.today() - timedelta(days=index)
         )
         for index in range(settings.NEWS_COUNT_ON_HOME_PAGE + 1)
-    ]
-    return News.objects.bulk_create(all_news)
+    )
 
 
 @pytest.fixture
@@ -84,11 +78,6 @@ def all_comments(news, author):
 
 
 @pytest.fixture
-def form_data():
-    return {'text': COMMENT_TEXT}
-
-
-@pytest.fixture
 def comment_edit_url(comment):
     return reverse('news:edit', args=(comment.id,))
 
@@ -99,10 +88,40 @@ def comment_delete_url(comment):
 
 
 @pytest.fixture
-def news_url(news):
+def news_detail_url(news):
     return reverse('news:detail', args=(news.id,))
 
 
 @pytest.fixture
-def url_to_comments(news_url):
-    return news_url + '#comments'
+def url_to_comments(news_detail_url):
+    return news_detail_url + '#comments'
+
+
+@pytest.fixture
+def home_url():
+    return reverse('news:home')
+
+
+@pytest.fixture
+def login_url():
+    return reverse('users:login')
+
+
+@pytest.fixture
+def logout_url():
+    return reverse('users:logout')
+
+
+@pytest.fixture
+def signup_url():
+    return reverse('users:signup')
+
+
+@pytest.fixture
+def edit_url_redirect(login_url, comment_edit_url):
+    return f'{login_url}?next={comment_edit_url}'
+
+
+@pytest.fixture
+def delete_url_redirect(login_url, comment_delete_url):
+    return f'{login_url}?next={comment_delete_url}'

@@ -1,41 +1,24 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
-from django.urls import reverse
-from notes.models import Note
+
+from .common import BaseTest
 
 User = get_user_model()
 
 
-class TestRoutes(TestCase):
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.author = User.objects.create(username='Лев Толстой')
-        cls.notes = Note.objects.create(
-            title='Заголовок',
-            text='Текст заметки',
-            slug='note-slug',
-            author=cls.author,
-        )
-        cls.reader = User.objects.create(username='Читатель Простой')
-        cls.author_client = Client()
-        cls.author_client.force_login(cls.author)
-        cls.reader_client = Client()
-        cls.reader_client.force_login(cls.reader)
+class TestRoutes(BaseTest):
 
     def test_pages_availability_for_anonymous_user(self):
         urls = (
-            'notes:home',
-            'users:login',
-            'users:logout',
-            'users:signup'
+            'home',
+            'login',
+            'logout',
+            'signup'
         )
         for name in urls:
             with self.subTest(name=name):
-                url = reverse(name)
-                response = self.client.get(url)
+                response = self.client.get(self.urls[name])
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_availability_for_notes_actions(self):
@@ -44,33 +27,29 @@ class TestRoutes(TestCase):
             (self.reader_client, HTTPStatus.NOT_FOUND),
         )
         for user, status in users_statuses:
-            for name in ('notes:detail', 'notes:delete', 'notes:edit'):
+            for name in ('detail', 'delete', 'edit'):
                 with self.subTest(user=user, name=name):
-                    url = reverse(name, args=(self.notes.slug,))
-                    response = user.get(url)
+                    response = user.get(self.urls[name])
                     self.assertEqual(response.status_code, status)
 
     def test_pages_availability_for_auth_user(self):
-        urls = ('notes:list', 'notes:add', 'notes:success')
+        urls = ('list', 'add', 'success')
         for name in urls:
             with self.subTest(name=name):
-                url = reverse(name)
-                response = self.author_client.get(url)
+                response = self.author_client.get(self.urls[name])
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_redirect_for_anonymous_client(self):
-        login_url = reverse('users:login')
-        news_slug = self.notes.slug
-        for name, args in (
-            ('notes:detail', (news_slug,)),
-            ('notes:edit', (news_slug,)),
-            ('notes:delete', (news_slug,)),
-            ('notes:add', None),
-            ('notes:success', None),
-            ('notes:list', None),
+        login_url = self.urls['login']
+        for name in (
+            'detail',
+            'edit',
+            'delete',
+            'add',
+            'success',
+            'list',
         ):
             with self.subTest(name=name):
-                url = reverse(name, args=args)
-                redirect_url = f'{login_url}?next={url}'
-                response = self.client.get(url)
+                redirect_url = f'{login_url}?next={self.urls[name]}'
+                response = self.client.get(self.urls[name])
                 self.assertRedirects(response, redirect_url)
